@@ -4,5 +4,5 @@ import pg from "pg";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
-await migrate(db, { migrationsFolder: "/app/drizzle" });
+await migrate(db, { migrationsFolder: "/opt/migrate/drizzle" });
 await pool.end();

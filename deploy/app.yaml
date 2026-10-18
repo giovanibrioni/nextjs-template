@@ -27,7 +27,7 @@ spec:
       initContainers:
         - name: migrate
           image: app
-          command: ["node", "migrate.mjs"]
+          command: ["node", "/opt/migrate/migrate.mjs"]
           env:
             - name: DATABASE_URL
               valueFrom:
