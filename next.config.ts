@@ -3,7 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Keep the repository AGENTS.md. Next.js would otherwise rewrite it on dev startup.
   agentRules: false,
+  output: "standalone",
   serverExternalPackages: [
+    "drizzle-orm",
     "pino",
     "pino-pretty",
     "pg",

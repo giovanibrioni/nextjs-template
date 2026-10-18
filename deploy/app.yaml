@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-template
+spec:
+  selector:
+    app: nextjs-template
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-template
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextjs-template
+  template:
+    metadata:
+      labels:
+        app: nextjs-template
+    spec:
+      initContainers:
+        - name: migrate
+          image: app
+          command: ["node", "migrate.mjs"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nextjs-template-db
+                  key: DATABASE_URL
+      containers:
+        - name: nextjs-template
+          image: app
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nextjs-template-db
+                  key: DATABASE_URL
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http

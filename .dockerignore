@@ -1,0 +1,9 @@
+.git
+.github
+.cursor
+deploy
+*.md
+.env
+.env.*
+node_modules
+.next
