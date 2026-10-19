@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install up down dev migrate revision test-unit test lint review
+.PHONY: help install up down dev migrate revision openapi test-unit test lint review
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
@@ -16,6 +16,9 @@ up: ## Start Postgres and ensure the app_test database exists
 
 down: ## Stop Postgres
 	docker compose down
+
+openapi: ## Write openapi.yaml for the template routes
+	node scripts/openapi.mjs
 
 dev: ## Run the app with reload on http://0.0.0.0:3000
 	pnpm exec next dev --hostname 0.0.0.0 --port 3000
