@@ -40,11 +40,25 @@ spec:
           ports:
             - name: http
               containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: nextjs-template-env
+                optional: true
           env:
             - name: HOSTNAME
               value: "0.0.0.0"
             - name: PORT
               value: "3000"
+            - name: ENVIRONMENT
+              value: homelab
+            - name: LOG_JSON
+              value: "true"
+            - name: OTEL_SERVICE_NAME
+              value: nextjs-template
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: deployment.environment=homelab
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://signoz-k8s-infra-otel-agent.o11y.svc.cluster.local:4318
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
