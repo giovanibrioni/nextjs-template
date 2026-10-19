@@ -31,6 +31,16 @@ export function startTelemetry(): void {
   provider.register();
 
   registerInstrumentations({
-    instrumentations: [new PgInstrumentation()],
+    instrumentations: [
+      new PgInstrumentation({
+        requestHook(span, query) {
+          span.setAttribute("db.system", "postgresql");
+          const database = query.connection.database;
+          if (database) {
+            span.setAttribute("db.name", database);
+          }
+        },
+      }),
+    ],
   });
 }

@@ -1,13 +1,11 @@
 import "server-only";
 
+import "@/backend/core/ensure-telemetry";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { getSettings } from "@/backend/core/config";
 import { logger } from "@/backend/core/logging";
-import { startTelemetry } from "@/backend/core/telemetry";
 import * as schema from "@/backend/schema";
-
-startTelemetry();
 
 export type DbExecutor = NodePgDatabase<typeof schema>;
 
