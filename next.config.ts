@@ -10,9 +10,12 @@ const nextConfig: NextConfig = {
     "pino-pretty",
     "pg",
     "@opentelemetry/sdk-trace-node",
+    "@opentelemetry/sdk-metrics",
     "@opentelemetry/instrumentation",
+    "@opentelemetry/instrumentation-http",
     "@opentelemetry/instrumentation-pg",
     "@opentelemetry/exporter-trace-otlp-http",
+    "@opentelemetry/exporter-metrics-otlp-http",
   ],
 };
 
