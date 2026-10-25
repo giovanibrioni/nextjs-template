@@ -1,10 +1,11 @@
 import "server-only";
 
-import { metrics } from "@opentelemetry/api";
+import http from "node:http";
+
+import { type Histogram, metrics } from "@opentelemetry/api";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
-import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
@@ -14,6 +15,37 @@ import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 import { getSettings } from "@/backend/core/config";
 
 let started = false;
+let requestDuration: Histogram | undefined;
+
+function patchHttpServerMetrics(): void {
+  if (!requestDuration) {
+    return;
+  }
+  const duration = requestDuration;
+  const originalEmit = http.Server.prototype.emit;
+  // Next.js App Router often bypasses @opentelemetry/instrumentation-http hooks;
+  // record http.server.request.duration on the Node server directly.
+  http.Server.prototype.emit = function patchedEmit(
+    this: http.Server,
+    event: string | symbol,
+    ...args: unknown[]
+  ): boolean {
+    if (event === "request") {
+      const req = args[0] as http.IncomingMessage;
+      const res = args[1] as http.ServerResponse;
+      const start = process.hrtime.bigint();
+      res.once("finish", () => {
+        const elapsedNs = Number(process.hrtime.bigint() - start);
+        duration.record(elapsedNs / 1e9, {
+          "http.request.method": req.method ?? "GET",
+          "http.response.status_code": res.statusCode,
+          "url.scheme": "http",
+        });
+      });
+    }
+    return originalEmit.apply(this, [event, ...args] as Parameters<typeof originalEmit>);
+  };
+}
 
 export function startTelemetry(): void {
   if (started) {
@@ -38,23 +70,30 @@ export function startTelemetry(): void {
 
   let meterProvider: MeterProvider | undefined;
   if (settings.OTEL_EXPORTER_OTLP_ENDPOINT) {
+    const metricsUrl = `${settings.OTEL_EXPORTER_OTLP_ENDPOINT.replace(/\/$/, "")}/v1/metrics`;
     meterProvider = new MeterProvider({
       resource,
       readers: [
         new PeriodicExportingMetricReader({
-          exporter: new OTLPMetricExporter(),
+          exporter: new OTLPMetricExporter({ url: metricsUrl }),
           exportIntervalMillis: 15_000,
         }),
       ],
     });
     metrics.setGlobalMeterProvider(meterProvider);
+    requestDuration = meterProvider
+      .getMeter("http")
+      .createHistogram("http.server.request.duration", {
+        unit: "s",
+        description: "Duration of HTTP server requests",
+      });
+    patchHttpServerMetrics();
   }
 
   registerInstrumentations({
     tracerProvider,
     meterProvider,
     instrumentations: [
-      new HttpInstrumentation(),
       new PgInstrumentation({
         requestHook(span, query) {
           span.setAttribute("db.system", "postgresql");
