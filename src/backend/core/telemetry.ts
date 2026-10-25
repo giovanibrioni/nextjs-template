@@ -30,18 +30,20 @@ export function startTelemetry(): void {
     ? [new BatchSpanProcessor(new OTLPTraceExporter())]
     : [];
 
-  const provider = new NodeTracerProvider({
+  const tracerProvider = new NodeTracerProvider({
     resource,
     spanProcessors,
   });
-  provider.register();
+  tracerProvider.register();
 
+  let meterProvider: MeterProvider | undefined;
   if (settings.OTEL_EXPORTER_OTLP_ENDPOINT) {
-    const meterProvider = new MeterProvider({
+    meterProvider = new MeterProvider({
       resource,
       readers: [
         new PeriodicExportingMetricReader({
           exporter: new OTLPMetricExporter(),
+          exportIntervalMillis: 15_000,
         }),
       ],
     });
@@ -49,6 +51,8 @@ export function startTelemetry(): void {
   }
 
   registerInstrumentations({
+    tracerProvider,
+    meterProvider,
     instrumentations: [
       new HttpInstrumentation(),
       new PgInstrumentation({
