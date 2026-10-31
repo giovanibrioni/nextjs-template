@@ -1,0 +1,4 @@
+stack: nextjs
+resources:
+  database: postgres
+  redis: false
